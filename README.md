@@ -12,6 +12,7 @@ Route Intelligence: Smart suggestions for travel corridors across India.
 Data Analytics: Integrated with MongoDB to track user engagement and trending destinations.
 
 🛠️ Tech Stack
+
 Frontend: HTML5, CSS3, JavaScript (ES6+)
 
 Backend: Node.js, Express.js
