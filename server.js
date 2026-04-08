@@ -94,15 +94,13 @@ app.delete("/delete-trip/:id", async (req, res) => {
 });
 
 // ✅ UPDATED DEALS ROUTE (Combines Mongo + Real-time Travelpayouts)
- app.get("/deals", async (req, res) => {
+app.get("/deals", async (req, res) => {
   try {
     // 1. Fetch random static deals from MongoDB
     const staticDeals = await Deal.aggregate([{ $sample: { size: 10 } }]);
 
-    // 2. Fetch live flight data
+    // 2. Fetch live flight data (optional, but good for real-time)
     let liveDeals = [];
-    const marker = process.env.TRAVELPAYOUTS_MARKER;
-
     try {
       const response = await fetch(
         "https://api.travelpayouts.com/v2/prices/latest?origin=BLR&currency=inr&limit=5",
@@ -114,39 +112,20 @@ app.delete("/delete-trip/:id", async (req, res) => {
           title: `${item.destination} Flight Deal`,
           price: `₹${item.price}`,
           discount: "Live Rate 🔥",
-          link: `https://www.wego.co.in/flights/blr/${item.destination}?marker=${marker}`
+          link: `https://www.wego.co.in/flights/blr/${item.destination}?marker=${process.env.TRAVELPAYOUTS_MARKER}`
         }));
       }
     } catch (apiErr) { console.log("API skipping..."); }
 
-    // 3. 🔥 THE MULTI-AFFILIATE FIX
-    const ebUid = "849805e9c8d5420b8efb022a8-714616"; // Your EconomyBookings ID
-    const srTrackId = "bd78bd076dfc47bda2e791201-714616"; // Your Searadar ID
-
-    const fixedStaticDeals = staticDeals.map((deal, index) => {
-      // Extract city (e.g., "Goa" from "Goa Beach Package")
+    // 3. 🔥 THE FIX: Correct your MongoDB links on the fly
+    const fixedStaticDeals = staticDeals.map(deal => {
+      // Extract the city name (e.g., "Goa" from "Goa Beach Tour Package")
       const cityName = deal.title.split(' ')[0]; 
-      let finalLink = "";
-
-      // Logic: If it's a coastal place, use Searadar. Otherwise, alternate.
-      const isCoastal = deal.title.toLowerCase().includes("goa") || 
-                        deal.title.toLowerCase().includes("beach") ||
-                        deal.title.toLowerCase().includes("kerala");
-
-      if (isCoastal) {
-        // ⛵ SEARADAR (Yachts)
-        finalLink = `https://searadar.com/search?location=${cityName}&track_id=${srTrackId}&utm_source=travelpayouts`;
-      } else if (index % 2 === 0) {
-        // 🚗 ECONOMYBOOKINGS (Car Rentals)
-        finalLink = `https://www.economybookings.com/en?idpick=${cityName}&btag=travelpayouts&tpo_uid=${ebUid}`;
-      } else {
-        // 🎟️ KLOOK (Tours & Activities)
-        finalLink = `https://www.klook.com/en-IN/search/result/?query=${cityName}&aid=${marker}`;
-      }
-
+      
       return {
         ...deal,
-        link: finalLink
+        // Replace the old Yatra/MMT link with a Klook search link
+        link: `https://www.klook.com/en-IN/search/result/?query=${cityName}&aid=${process.env.TRAVELPAYOUTS_MARKER}`
       };
     });
 
