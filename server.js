@@ -30,34 +30,65 @@ app.get("/test", (req, res) => {
 });
 
 // REGISTER route
+// REGISTER route
 app.post("/register", async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    const newUser = new User({ name, email, password });
+    const { name, email, mobile, password } = req.body;
+
+    // ✅ Require at least email OR mobile
+    if (!email && !mobile) {
+      return res.json({ message: "Email or Mobile required" });
+    }
+
+    // ✅ Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [{ email }, { mobile }]
+    });
+
+    if (existingUser) {
+      return res.json({ message: "User already exists" });
+    }
+
+    const newUser = new User({ name, email, mobile, password });
     await newUser.save();
+
     res.json({ message: "User registered successfully" });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // LOGIN route
+// LOGIN route
 app.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.json({ message: "User not found" });
-    if (user.password !== password) return res.json({ message: "Invalid password" });
+    const { email, mobile, password } = req.body;
 
+    // ✅ Find user by email OR mobile
+    const user = await User.findOne({
+      $or: [{ email }, { mobile }]
+    });
+
+    if (!user) return res.json({ message: "User not found" });
+
+    if (user.password !== password) {
+      return res.json({ message: "Invalid password" });
+    }
+
+    // ✅ Login tracking (unchanged)
     const today = new Date().toISOString().split("T")[0];
     let record = await Visit.findOne({ date: today });
+
     if (record) {
       record.logins += 1;
       await record.save();
     } else {
       await Visit.create({ date: today, visits: 0, logins: 1 });
     }
+
     res.json({ message: "Login successful", user });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
