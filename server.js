@@ -97,10 +97,20 @@ app.post("/login", async (req, res) => {
 // TRIP ROUTES
 app.post("/save-trip", async (req, res) => {
   try {
-    const { email, destination, date } = req.body;
-    const newTrip = new Trip({ email, destination, date });
+    const { email, mobile, destination, date } = req.body;
+
+    const userKey = email || mobile; // 🔥 THIS FIXES EVERYTHING
+
+    const newTrip = new Trip({
+      email: userKey,
+      destination,
+      date
+    });
+
     await newTrip.save();
+
     res.json({ message: "Trip saved successfully" });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
