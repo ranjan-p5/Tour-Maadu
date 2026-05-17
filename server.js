@@ -63,12 +63,15 @@ app.post("/register", async (req, res) => {
 // LOGIN route
 app.post("/login", async (req, res) => {
   try {
-    const { email, mobile, password } = req.body;
+     const { email, mobile, password } = req.body;
 
-    // ✅ Find user by email OR mobile
-    const user = await User.findOne({
-      $or: [{ email }, { mobile }]
-    });
+let user;
+
+if (email) {
+  user = await User.findOne({ email });
+} else if (mobile) {
+  user = await User.findOne({ mobile });
+}
 
     if (!user) return res.json({ message: "User not found" });
 
